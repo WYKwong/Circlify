@@ -1,0 +1,29 @@
+node_modules/
+**/node_modules/
+
+# Env files
+.env
+*.env
+backend/.env
+frontend/.env
+
+# Build outputs
+backend/dist/
+frontend/.next/
+frontend/out/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editors
+.vscode/
+.idea/
+.DS_Store
+
+# Misc
+*.local
+*.cache

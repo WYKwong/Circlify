@@ -1,0 +1,40 @@
+service: mvp-backend
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: dev
+  memorySize: 512
+  timeout: 30
+  environment:
+    NODE_OPTIONS: '--enable-source-maps'
+    BOARDS_TABLE: ${env:BOARDS_TABLE, 'Boards'}
+    BOARD_MEMBERSHIPS_TABLE: ${env:BOARD_MEMBERSHIPS_TABLE, 'BoardMemberships'}
+    BOARD_JOIN_REQUESTS_TABLE: ${env:BOARD_JOIN_REQUESTS_TABLE, 'BoardJoinRequests'}
+    AVAILABLE_SERVICES_TABLE: ${env:AVAILABLE_SERVICES_TABLE, 'AvailableServices'}
+    BOARD_SERVICE_SETTINGS_TABLE: ${env:BOARD_SERVICE_SETTINGS_TABLE, 'BoardServiceSettings'}
+    BOARD_SERVICE_PERMISSIONS_TABLE: ${env:BOARD_SERVICE_PERMISSIONS_TABLE, 'BoardServicePermissions'}
+
+# plugins:
+#   - serverless-offline
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+
+functions:
+  api:
+    handler: dist/main.handler
+    events:
+      - httpApi:
+          path: /auth/cognito/login
+          method: POST
+      - httpApi:
+          path: /auth/cognito/callback
+          method: GET
+      - httpApi: # catch-all
+          path: /{proxy+}
+          method: ANY
