@@ -204,7 +204,7 @@ export default function BoardCard({ board, onBoardUpdate }: BoardCardProps) {
                     setAvailableServices(svcRes.data || []);
                     setSelectedServices(board.enabledServices || []);
                     const cfgMap: Record<string, any> = {};
-                    (cfgRes.data || []).forEach((i: any)=>{ cfgMap[i.serviceKey] = i.config; });
+                    (cfgRes.data || []).forEach((i: any)=>{ cfgMap[i.serviceType] = i.config; });
                     setServiceConfigs(cfgMap);
                   } catch (e:any) {
                     setSettingsError(e.response?.data?.message||'Failed to load services');
@@ -330,22 +330,22 @@ export default function BoardCard({ board, onBoardUpdate }: BoardCardProps) {
                 <label className="block text-sm font-medium mb-1">Services</label>
                 <div className="space-y-2">
                   {availableServices.map((s:any)=>(
-                    <div key={s.serviceId} className="border rounded p-2">
+                    <div key={s.serviceType} className="border rounded p-2">
                       <div className="flex items-center space-x-2">
                         <input
                           type="checkbox"
-                          checked={selectedServices.includes(s.serviceId)}
+                          checked={selectedServices.includes(s.serviceType)}
                           onChange={(e)=>{
                             const checked = e.target.checked;
-                            setSelectedServices(prev=>checked? Array.from(new Set([...prev, s.serviceId])) : prev.filter(k=>k!==s.serviceId));
+                            setSelectedServices(prev=>checked? Array.from(new Set([...prev, s.serviceType])) : prev.filter(k=>k!==s.serviceType));
                           }}
                         />
                         <div>
-                          <div className="font-medium text-sm">{s.displayName || s.serviceId}</div>
+                          <div className="font-medium text-sm">{s.displayName || s.serviceType}</div>
                           <div className="text-xs text-gray-600">{s.description}</div>
                         </div>
                       </div>
-                      {s.serviceId==='approveJoin' && selectedServices.includes('approveJoin') && (
+                      {s.serviceType==='approveJoin' && selectedServices.includes('approveJoin') && (
                         <div className="mt-2 ml-6 space-y-2">
                           <div className="flex items-center space-x-2">
                             <input

@@ -21,54 +21,54 @@ export class BoardServicePermissionsController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Put(':id/services/:serviceKey/permissions/:userId')
+  @Put(':id/services/:serviceId/permissions/:userId')
   async grant(
     @Param('id') boardId: string,
-    @Param('serviceKey') serviceKey: string,
+    @Param('serviceId') serviceId: string,
     @Param('userId') targetUserId: string,
     @Req() req: Request,
   ) {
     const user: any = (req as any).user;
     if (!user?.sub) throw new HttpException('Unauthorized', 401);
     await this.ensureOwner(boardId, user.sub);
-    await this.perms.grant(boardId, targetUserId, serviceKey, user.sub);
+    await this.perms.grant(boardId, targetUserId, serviceId, user.sub);
     return { granted: true };
   }
 
   @UseGuards(JwtAuthGuard)
-  @Delete(':id/services/:serviceKey/permissions/:userId')
+  @Delete(':id/services/:serviceId/permissions/:userId')
   async revoke(
     @Param('id') boardId: string,
-    @Param('serviceKey') serviceKey: string,
+    @Param('serviceId') serviceId: string,
     @Param('userId') targetUserId: string,
     @Req() req: Request,
   ) {
     const user: any = (req as any).user;
     if (!user?.sub) throw new HttpException('Unauthorized', 401);
     await this.ensureOwner(boardId, user.sub);
-    await this.perms.revoke(boardId, targetUserId, serviceKey);
+    await this.perms.revoke(boardId, targetUserId, serviceId);
     return { revoked: true };
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get(':id/services/:serviceKey/permissions')
+  @Get(':id/services/:serviceId/permissions')
   async list(
     @Param('id') boardId: string,
-    @Param('serviceKey') serviceKey: string,
+    @Param('serviceId') serviceId: string,
     @Req() req: Request,
   ) {
     const user: any = (req as any).user;
     if (!user?.sub) throw new HttpException('Unauthorized', 401);
     await this.ensureOwner(boardId, user.sub);
-    const items = await this.perms.listForService(boardId, serviceKey);
+    const items = await this.perms.listForService(boardId, serviceId);
     return items.map((i) => ({ userId: i.userId, grantedAt: i.grantedAt, grantedBy: i.grantedBy }));
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get(':id/services/:serviceKey/permissions/me')
+  @Get(':id/services/:serviceId/permissions/me')
   async hasForMe(
     @Param('id') boardId: string,
-    @Param('serviceKey') serviceKey: string,
+    @Param('serviceId') serviceId: string,
     @Req() req: Request,
   ) {
     const user: any = (req as any).user;
@@ -78,7 +78,7 @@ export class BoardServicePermissionsController {
     if (board.ownerId === user.sub) return { has: true };
     const member = await this.membershipService.getMember(boardId, user.sub);
     if (!member || member.role === 'member') return { has: false };
-    const has = await this.perms.has(boardId, user.sub, serviceKey);
+    const has = await this.perms.has(boardId, user.sub, serviceId);
     return { has };
   }
 }

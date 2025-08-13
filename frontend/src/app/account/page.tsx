@@ -242,29 +242,29 @@ export default function AccountCenterPage() {
           <label className='block text-sm font-medium mb-1'>Enable services</label>
           <div className='space-y-2'>
             {availableServices.map(s => (
-              <div key={s.serviceId} className='border rounded p-2'>
+              <div key={s.serviceType} className='border rounded p-2'>
                 <div className='flex items-center space-x-2'>
                   <input
                     type='checkbox'
-                    checked={form.enabledServices.includes(s.serviceId)}
+                    checked={form.enabledServices.includes(s.serviceType)}
                     onChange={e => {
                       const checked = e.target.checked;
                       setForm(prev => ({
                         ...prev,
                         enabledServices: checked
-                          ? Array.from(new Set([...(prev.enabledServices||[]), s.serviceId]))
-                          : (prev.enabledServices||[]).filter((id: string) => id !== s.serviceId)
+                          ? Array.from(new Set([...(prev.enabledServices||[]), s.serviceType]))
+                          : (prev.enabledServices||[]).filter((id: string) => id !== s.serviceType)
                       }));
                     }}
                   />
                   <div>
-                    <div className='font-medium text-sm'>{s.displayName || s.serviceId}</div>
+                    <div className='font-medium text-sm'>{s.displayName || s.serviceType}</div>
                     <div className='text-xs text-gray-600'>{s.description}</div>
                   </div>
                 </div>
 
                 {/* approveJoin additional settings */}
-                {s.serviceId === 'approveJoin' && form.enabledServices.includes('approveJoin') && (
+                {s.serviceType === 'approveJoin' && form.enabledServices.includes('approveJoin') && (
                   <div className='mt-2 ml-6 space-y-2'>
                     <div className='flex items-center space-x-2'>
                       <input

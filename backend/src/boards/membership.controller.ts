@@ -180,8 +180,9 @@ export class BoardMembershipController {
     
     const board = await this.boardService.findById(boardId);
     if (!board) throw new HttpException('Board not found', 404);
-    
-    return { permissions: board.enabledServices || [] };
+    // Return all service instances for this board so UI can manage per-instance permissions
+    const services = await this.settingsService.list(boardId);
+    return { permissions: services.map(s => ({ serviceId: s.serviceId, serviceType: s.serviceType })) };
   }
 
   @UseGuards(JwtAuthGuard)

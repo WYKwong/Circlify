@@ -4,9 +4,9 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, ScanCommand, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 
 export interface AvailableService {
-  PK: string; // SERVICE#<serviceId>
+  PK: string; // SERVICETYPE#<serviceType>
   SK: string; // META
-  serviceId: string; // e.g., approveJoin
+  serviceType: string; // e.g., approveJoin
   displayName: string;
   description?: string;
   haveQuestion?: boolean;
@@ -28,14 +28,14 @@ export class AvailableServicesService {
     this.docClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
   }
 
-  private pk(serviceId: string) { return `SERVICE#${serviceId}`; }
+  private pk(serviceType: string) { return `SERVICETYPE#${serviceType}`; }
 
   async listAll(): Promise<AvailableService[]> {
     try {
       const res: any = await this.docClient.send(new ScanCommand({
         TableName: this.tableName,
         FilterExpression: 'begins_with(PK, :p) AND SK = :s',
-        ExpressionAttributeValues: { ':p': 'SERVICE#', ':s': 'META' },
+        ExpressionAttributeValues: { ':p': 'SERVICETYPE#', ':s': 'META' },
       }));
       return (res.Items || []) as AvailableService[];
     } catch (error) {
@@ -44,10 +44,10 @@ export class AvailableServicesService {
     }
   }
 
-  async getById(serviceId: string): Promise<AvailableService | undefined> {
+  async getById(serviceType: string): Promise<AvailableService | undefined> {
     const { Item } = await this.docClient.send(new GetCommand({
       TableName: this.tableName,
-      Key: { PK: this.pk(serviceId), SK: 'META' },
+      Key: { PK: this.pk(serviceType), SK: 'META' },
     }));
     return Item as AvailableService | undefined;
   }

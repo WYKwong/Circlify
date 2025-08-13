@@ -1,8 +1,6 @@
 # Circlify – Distributed 4-Layer Architecture
 
-> **Version:** MVP ‑ December 2024
-
-This document provides a comprehensive overview of the Circlify project, detailing the distributed 4-layer architecture, service components, database design, and current feature implementation.
+This document provides a high-level overview of the Circlify project architecture and structure. Detailed designs (data model, API surface, domain flows, and auth) have been moved into focused documents under `description/`.
 
 ## Architecture Overview
 
@@ -45,15 +43,10 @@ frontend/
 └── package.json
 ```
 
-### Key Components
-
-| Component | Purpose | Key Features |
-|-----------|---------|--------------|
-| **Dashboard** | Main board discovery | • Display all boards in grid layout<br>• Join boards (direct or with approval)<br>• Authentication status display<br>• Dynamic join button states |
-| **Account Center** | User management | • Username editing<br>• Board creation with approval settings<br>• Member role management<br>• Join request approval<br>• Permission management |
-| **BoardCard** | Board management UI | • Square card layout (64x64)<br>• Role-based content display<br>• Member search and role updates<br>• Permission management<br>• Join request handling |
-| **PermissionSelector** | Permission management | • Multi-select permission checkboxes<br>• Role assignment with permissions<br>• Permission modification for existing managers |
-| **Authentication** | User registration/login | • Email/password signup<br>• Email confirmation flow<br>• JWT-based session management |
+### Key Components (high-level)
+- Dashboard and Account Center
+- `BoardCard` and `PermissionSelector`
+- Authentication views (signup, confirm, login)
 
 ### Technical Implementation
 - **Framework**: Next.js 15 with App Router
@@ -66,55 +59,8 @@ frontend/
 ---
 
 ## 2. API Gateway Layer - AWS HTTP API
-
-### Configuration
-```yaml
-# backend/serverless.yml
-functions:
-  api:
-    handler: dist/main.handler
-    events:
-      - httpApi:
-          routes:
-            # Authentication
-            - POST /auth/cognito/login
-            - POST /auth/cognito/signup
-            - POST /confirm
-            - GET /profile
-            - POST /profile/username
-            - GET /profile/username-exists
-            
-            # Board Management
-            - GET /boards
-            - POST /boards
-            - GET /boards/my
-            - PUT /boards/{id}
-            - GET /boards/{id}/permissions
-            
-            # Membership Management
-            - POST /boards/{id}/join
-            - GET /boards/my-memberships
-            - GET /boards/my-memberships-detailed
-            - GET /boards/{id}/members/{role}
-            - PUT /boards/{id}/members/{userId}/role
-            - GET /boards/{id}/members/{userId}/permissions
-            - GET /boards/{id}/members/search/{username}
-            
-            # Join Requests
-            - POST /boards/{id}/request
-            - GET /boards/{id}/requests
-            - POST /boards/{id}/requests/{userId}/approve
-            - POST /boards/{id}/requests/{userId}/reject
-            
-            - /{proxy+}  # Catch-all for other routes
-```
-
-### Key Features
-- **HTTPS Termination**: Automatic SSL certificate management
-- **Request Routing**: Path-based routing to Lambda functions
-- **CORS Support**: Cross-origin resource sharing configuration
-- **Authentication**: JWT validation at gateway level
-- **Rate Limiting**: Built-in request throttling
+- Serverless HTTP API forwards all routes to the NestJS Lambda handler.
+- For the complete REST surface and controller mapping, see: `description/backend-apis.md`.
 
 ---
 
@@ -145,74 +91,7 @@ backend/
 └── package.json
 ```
 
-### Service Architecture
-
-#### Authentication Services
-| Service | Responsibility | Key Methods |
-|---------|---------------|-------------|
-| **AuthService** | User registration/login | • `signUp(email, password)`<br>• `signIn(email, password)`<br>• `confirmSignUp(email, code)` |
-| **CognitoService** | AWS Cognito integration | • `createUser(email, password)`<br>• `authenticateUser(email, password)`<br>• `confirmUser(email, code)` |
-| **UserProfileService** | User profile management | • `create(userId, email)`<br>• `findById(userId)`<br>• `updateUserName(userId, userName)`<br>• `findByUserName(userName)` |
-
-#### Board Management Services
-| Service | Responsibility | Key Methods |
-|---------|---------------|-------------|
-| **BoardService** | Board CRUD operations | • `create(boardData)`<br>• `findById(boardId)`<br>• `findByName(boardName)`<br>• `findByOwner(ownerId)`<br>• `listAll()`<br>• `updateBoard(boardId, updates)` |
-| **BoardMembershipService** | Member role management | • `addMember(boardId, userId, role, permissions?)`<br>• `updateRole(boardId, userId, role, permissions?)`<br>• `listByRole(boardId, role)`<br>• `isMember(boardId, userId)`<br>• `listMembershipsForUser(userId)`<br>• `getMember(boardId, userId)` |
-| **BoardJoinRequestService** | Join request handling | • `addRequest(boardId, userId, answer, ttlDays)`<br>• `listRequests(boardId)`<br>• `approveRequest(boardId, userId)`<br>• `rejectRequest(boardId, userId)`<br>• `hasPending(boardId, userId)` |
-
-### Controller Endpoints
-
-#### Authentication Endpoints
-```
-POST /auth/cognito/signup     # User registration
-POST /auth/cognito/login      # User authentication
-POST /confirm                 # Email confirmation
-GET  /profile                 # Get user profile
-POST /profile/username        # Update username
-GET  /profile/username-exists # Check username availability
-```
-
-#### Board Management Endpoints
-```
-GET  /boards                  # List all boards
-POST /boards                  # Create new board
-GET  /boards/my              # Get user's owned/managed boards
-PUT  /boards/{id}            # Update board settings
-GET  /boards/{id}/permissions # Get available board permissions
-GET  /services               # List AvailableServices (catalog)
-GET  /boards/{id}/services            # List service settings for the board
-GET  /boards/{id}/services/{key}      # Get a specific service setting
-PUT  /boards/{id}/services/{serviceKey}    # Enable or update a service
-DELETE /boards/{id}/services/{serviceKey}  # Disable a service (with cascade)
-```
-
-#### Member Management Endpoints
-```
-POST /boards/{id}/join       # Join board (direct or request)
-GET  /boards/my-memberships  # Get user's board memberships
-GET  /boards/my-memberships-detailed # Get detailed memberships
-GET  /boards/{id}/members/{role}           # List members by role
-PUT  /boards/{id}/members/{userId}/role    # Update member role
-GET  /boards/{id}/members/{userId}/permissions # Deprecated: returns []
-GET  /boards/{id}/members/search/{username} # Search member by username
-```
-
-#### Service Permissions Endpoints
-```
-PUT    /boards/{id}/services/{serviceKey}/permissions/{userId}   # Grant permission (owner-only)
-DELETE /boards/{id}/services/{serviceKey}/permissions/{userId}   # Revoke permission (owner-only)
-GET    /boards/{id}/services/{serviceKey}/permissions            # List service permissions (owner-only)
-GET    /boards/{id}/services/{serviceKey}/permissions/me         # Check current user's permission
-```
-
-#### Join Request Endpoints
-```
-POST /boards/{id}/request                   # Submit join request
-GET  /boards/{id}/requests                  # List pending requests
-POST /boards/{id}/requests/{userId}/approve # Approve request
-POST /boards/{id}/requests/{userId}/reject  # Reject request
-```
+For the complete REST surface, see: `description/backend-apis.md`.
 
 ### Security Implementation
 - **JWT Strategy**: Custom JWT validation using `@nestjs/passport`
@@ -221,208 +100,51 @@ POST /boards/{id}/requests/{userId}/reject  # Reject request
 - **Input Validation**: DTO-based request validation
 - **Permission-based Authorization**: Role and permission-based access control
 
+### Modular Services Architecture
+
+Circlify supports modular, board-level services that can be selectively enabled and configured per board.
+
+- Service Catalog (`AvailableServices`):
+  - Global list of optional features (e.g., `approveJoin`).
+  - Backed by DynamoDB entries keyed by `PK=SERVICETYPE#<serviceType>`, `SK=META`.
+  - Public listing via `GET /services` for board creation UI.
+
+- Enabling a Service for a Board:
+  - Boards maintain `enabledServices: string[]` on their metadata (`Boards` table).
+  - Owner enables or updates a service via `PUT /boards/:id/services/:serviceKey`.
+  - Per-board settings are stored in `BoardServiceSettings` with `PK=BOARD#<boardId>` and `SK=SERVICE#<serviceId>`; fields include `serviceType`, `isDefault`, `config`.
+  - GSIs support listing and reverse lookup:
+    - `GSI1`: `GSI1PK=BOARD#<boardId>`, `GSI1SK=SERVICETYPE#<serviceType>#<serviceId>`
+    - `GSI2`: `GSI2PK=SERVICE#<serviceId>`, `GSI2SK=BOARD#<boardId>`
+  - Disabling via `DELETE /boards/:id/services/:serviceKey` cascades cleanup (singleton deletes one item; multi-instance deletes all items of that type). For `approveJoin`, deletes pending join requests.
+
+- Per-service Permissions for Managers:
+  - Owners can grant granular capabilities to managers using `BoardServicePermissions` (keyed by `PK=BOARD#<boardId>#SERVICE#<serviceId>`, `SK=USER#<userId>`).
+  - Endpoints: grant `PUT /boards/:id/services/:serviceId/permissions/:userId`, revoke `DELETE ...`, list `GET .../permissions`, self-check `GET .../permissions/me`.
+  - Owners are implicitly allowed; members are denied; managers must be explicitly granted per service.
+
+- Existing Service – `approveJoin`:
+  - Adds a join-request workflow with optional question and TTL.
+  - Users either join directly or submit a request (`POST /boards/:id/request`), which can be listed/approved/rejected by the owner.
+  - See detailed design and flow: `description/services-modular.md`.
+
 ---
 
 ## 4. Data Access Layer - AWS Services
-
-### Database Design - Unified PK/SK Architecture
-
-All DynamoDB tables follow a unified **Partition Key (PK) / Sort Key (SK)** design pattern for scalability and efficient querying.
-
-Current tables (7):
-- AvailableServices – PK: `SERVICE#<serviceId>`, SK: `META`
-- BoardServiceSettings – PK: `BOARD#<boardId>`, SK: `SERVICE#<serviceKey>`
-- BoardServicePermissions – PK: `BOARD#<boardId>#SERVICE#<serviceKey>`, SK: `USER#<userId>`
-- Boards – PK: `BOARD#<boardId>`, SK: `META`
-- BoardMemberships – PK: `BOARD#<boardId>`, SK: `USER#<userId>`
-- BoardJoinRequests – PK: `BOARD#<boardId>`, SK: `REQUEST#<userId>`
-- UserProfiles – PK: `USER#<userId>`, SK: `PROFILE`
-
-#### Table: UserProfiles
-```json
-{
-  "PK": "USER#<userId>",
-  "SK": "PROFILE",
-  "userId": "<userId>",
-  "email": "user@example.com",
-  "userName": "username",
-  "createdAt": "2024-12-07T18:28:15.735Z"
-}
-```
-
-#### Table: Boards
-```json
-{
-  "PK": "BOARD#<boardId>",
-  "SK": "META",
-  "boardId": "<boardId>",
-  "boardName": "Project Board",
-  "ownerId": "<userId>",
-  "enabledServices": ["approveJoin"],
-  "createdAt": "2024-12-07T21:29:54.716Z"
-}
-```
-
-#### Table: BoardMemberships
-```json
-{
-  "PK": "BOARD#<boardId>",
-  "SK": "USER#<userId>",
-  "boardId": "<boardId>",
-  "userId": "<userId>",
-  "role": "member|manager|owner",
-  "joinedAt": "2024-12-07T21:29:54.716Z"
-}
-```
-
-#### Table: BoardJoinRequests
-```json
-{
-  "PK": "BOARD#<boardId>",
-  "SK": "REQUEST#<userId>",
-  "boardId": "<boardId>",
-  "userId": "<userId>",
-  "answer": "I want to contribute to the project",
-  "expiresAt": 1728000000,
-  "createdAt": "2024-12-07T21:29:54.716Z"
-}
-```
-
-#### Table: AvailableServices
-```json
-{
-  "PK": "SERVICE#approveJoin",
-  "SK": "META",
-  "serviceId": "approveJoin",
-  "displayName": "Need approval to join",
-  "description": "支持板块的申请处理"
-}
-```
-
-Notes:
-- These service catalog entries must be seeded/created manually in the `AvailableServices` table (no automatic provisioning).
-- Currently available services: `approveJoin`.
-
-#### Table: BoardServiceSettings
-```json
-{
-  "PK": "BOARD#<boardId>",
-  "SK": "SERVICE#<serviceKey>",
-  "boardId": "<boardId>",
-  "serviceKey": "approveJoin",
-  "config": {
-    "ttlDays": 3, // (range:1-5, unit: day)
-    "askQuestion": true,
-    "questionText": "Why do you want to join?"
-  }
-}
-```
-
-#### Table: BoardServicePermissions
-```json
-{
-  "PK": "BOARD#<boardId>#SERVICE#<serviceKey>",
-  "SK": "USER#<userId>",
-  "boardId": "<boardId>",
-  "userId": "<userId>",
-  "serviceKey": "approveJoin",
-  "grantedAt": "2025-08-08T10:00:00Z",
-  "grantedBy": "<ownerUserId>"
-}
-```
-
-### Global Secondary Indexes (GSIs)
-
-| Index Name | Partition Key | Sort Key | Purpose |
-|------------|---------------|----------|---------|
-| `userName-index` | `userName` | - | Username uniqueness and lookup |
-| `ownerId-index` | `ownerId` | - | Query boards by owner |
-| `boardName-index` | `boardName` | - | Board name uniqueness |
-| `userId-index` | `userId` | - | List user's memberships and requests |
-
-### AWS Services Integration
-
-#### Amazon Cognito
-- **User Pool**: Managed user authentication
-- **App Client**: OAuth 2.0 client configuration
-- **Functions**: Sign-up, sign-in, password reset
-- **Integration**: `@aws-sdk/client-cognito-identity-provider`
-
-#### Amazon DynamoDB
-- **Tables**: UserProfiles, Boards, BoardMemberships, BoardJoinRequests, AvailableServices, BoardServiceSettings, BoardServicePermissions
-- **Document Client**: `@aws-sdk/lib-dynamodb` for type-safe operations
-- **TTL**: Automatic cleanup for join requests
-- **GSI**: Efficient querying on non-primary key attributes
-- **Fallback Logic**: Scan operations for development environments
+See the full DynamoDB schema and indexes: `description/dynamodb-tables.md`.
 
 ---
 
-## Environment Variables
-
-### Backend Configuration
-```bash
-# AWS
-AWS_REGION=us-east-2
-
-# Cognito
-COGNITO_USER_POOL_ID=your-user-pool-id
-COGNITO_ISSUER=https://cognito-idp.us-east-2.amazonaws.com/your-user-pool-id
-COGNITO_CLIENT_ID=your-client-id
-COGNITO_CLIENT_SECRET=your-client-secret
-COGNITO_DOMAIN=https://yourdomain.auth.us-east-2.amazoncognito.com
-COGNITO_REDIRECT_URI=http://localhost:3000/auth/cognito/callback
-COGNITO_LOGOUT_URI=http://localhost:3001
-
-# App
-FRONTEND_URL=http://localhost:3001
-
-# Security
-SESSION_SECRET=your-session-secret
-JWT_SECRET=your-jwt-secret
-```
-
-Table names are centrally configured in code (`backend/src/config/tables.config.ts`) and loaded at startup. Legacy `*_TABLE` environment variables are no longer required.
-
-### Frontend Configuration
-```bash
-# API Configuration
-NEXT_PUBLIC_API_BASE=http://localhost:3000
-```
+## Detailed Design Docs
+- Data model: `description/dynamodb-tables.md`
+- REST APIs: `description/backend-apis.md`
+- Board domain design: `description/board-domain.md`
+- Authentication & sessions: `description/auth-cognito-jwt.md`
 
 ---
 
 ## Feature Implementation Details
-
-### Board Creation Flow
-1. **Frontend**: User fills board creation form, selects Available Services, and configures per-service options
-2. **Validation**: Client-side duplicate name check
-3. **Backend**: `BoardService.create()` with approval configuration
-4. **Database**: Store board metadata with PK=`BOARD#<boardId>`, SK=`META`
-5. **Membership**: Automatically add creator as owner with default permissions
-6. **Enabled Services**: Set from form selection; if `approveJoin` selected, optional `joinQuestion` and TTL can be configured. If a question is set, applicants must answer.
-
-### Member Search & Role Management
-1. **Search**: Query BoardMemberships by boardId, then UserProfiles by userId
-2. **Role Update**: Update membership record with new role（permissions decoupled to BoardServicePermissions）
-3. **Authorization**: Only board owners can manage member roles
-4. **Real-time**: Immediate UI updates after role changes
-5. **Permission Management**: Granular permission assignment for managers
-
-### Join Request Workflow
-1. **Request**: User submits join request; if the board has a `joinQuestion`, the answer is mandatory
-2. **Storage**: Save to BoardJoinRequests with TTL
-3. **Approval**: Owners/managers with `approveJoin` permission review requests（manager permission stored in BoardServicePermissions）
-4. **Membership**: Approved requests automatically create membership
-
-### Permission System
-1. **Board Enabled Services**: Each board has an `enabledServices` list（feature toggle）
-2. **Per-service Permissions**: Manager capabilities are stored in `BoardServicePermissions` per service
-3. **Authorization Rule of Thumb**:
-   - Owner: always allowed
-   - Member: always denied
-   - Manager: must have a corresponding entry in `BoardServicePermissions` for the service
-4. **UI Control**: Components check `/boards/{id}/services/{key}/permissions/me` for runtime permission
-5. **Role Management**: Owners assign role via membership; granular permissions via BoardServicePermissions
+Detailed domain flows have moved to: `description/board-domain.md`.
 
 ---
 
@@ -526,24 +248,7 @@ npm run build
 ---
 
 ## Technical Notes
-
-### Error Handling
-- **Backend**: Comprehensive error handling with fallback mechanisms
-- **Frontend**: User-friendly error messages and validation
-- **Database**: GSI fallback for development environments
-- **TypeScript**: Strict type checking throughout the application
-
-### Performance Optimizations
-- **DynamoDB**: Efficient PK/SK design with GSIs
-- **Frontend**: Component-level state management
-- **API**: Optimized query patterns and caching
-- **Build**: Optimized Next.js builds with tree shaking
-
-### Security Considerations
-- **Authentication**: Multi-factor authentication ready
-- **Authorization**: Permission-based access control
-- **Data Protection**: Encrypted data at rest and in transit
-- **Session Security**: Secure cookie configuration
+See detailed notes in each focused doc under `description/`.
 
 ---
 

@@ -17,7 +17,8 @@ export default function PermissionSelector({
   onPermissionsUpdate, 
   onClose 
 }: PermissionSelectorProps) {
-  const [availablePermissions, setAvailablePermissions] = useState<string[]>([]);
+  type PermissionKey = { serviceId: string; serviceType: string };
+  const [availablePermissions, setAvailablePermissions] = useState<PermissionKey[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(currentPermissions);
   const [originalSelected, setOriginalSelected] = useState<string[]>(currentPermissions);
   const [loading, setLoading] = useState(false);
@@ -28,16 +29,16 @@ export default function PermissionSelector({
     const loadPermissions = async () => {
       try {
         const { data } = await axios.get(`/api/boards/${boardId}/permissions`);
-        const perms: string[] = data.permissions || [];
+        const perms: PermissionKey[] = (data.permissions || []) as PermissionKey[];
         setAvailablePermissions(perms);
         // For each available permission, get existing assignments and mark selected if this user has it
         const results = await Promise.all(
-          perms.map(async (key) => {
+          perms.map(async (p) => {
             try {
-              const { data: list } = await axios.get(`/api/boards/${boardId}/services/${key}/permissions`);
+              const { data: list } = await axios.get(`/api/boards/${boardId}/services/${p.serviceId}/permissions`);
               const has = (list || []).some((i: any) => i.userId === userId);
-              return { key, has };
-            } catch { return { key, has: false }; }
+              return { key: p.serviceId, has };
+            } catch { return { key: p.serviceId, has: false }; }
           })
         );
         const existing = results.filter(r => r.has).map(r => r.key);
@@ -90,17 +91,17 @@ export default function PermissionSelector({
             Select permissions for this user. If no permissions are selected, the user will be a member.
           </p>
           
-          {availablePermissions.map(permission => (
-            <div key={permission} className="flex items-center space-x-2">
+          {availablePermissions.map(p => (
+            <div key={p.serviceId} className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id={permission}
-                checked={selectedPermissions.includes(permission)}
-                onChange={() => handlePermissionToggle(permission)}
+                id={p.serviceId}
+                checked={selectedPermissions.includes(p.serviceId)}
+                onChange={() => handlePermissionToggle(p.serviceId)}
                 className="rounded"
               />
-              <label htmlFor={permission} className="text-sm">
-                {permission === 'approveJoin' ? 'Approve Join Requests' : permission}
+              <label htmlFor={p.serviceId} className="text-sm">
+                {p.serviceType === 'approveJoin' ? 'Approve Join Requests' : `${p.serviceType} (${p.serviceId})`}
               </label>
             </div>
           ))}

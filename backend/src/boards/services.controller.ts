@@ -11,7 +11,7 @@ export class AvailableServicesController {
   async list() {
     const services = await this.service.listAll();
     return services.map(s => ({
-      serviceId: s.serviceId,
+      serviceType: s.serviceType,
       displayName: s.displayName,
       description: s.description,
       haveQuestion: !!s.haveQuestion,

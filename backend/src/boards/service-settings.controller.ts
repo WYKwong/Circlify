@@ -8,13 +8,13 @@ export class BoardServiceSettingsController {
   @Get(':id/services')
   async list(@Param('id') id: string) {
     const items = await this.svc.list(id);
-    return items.map((i) => ({ serviceKey: i.serviceKey, config: i.config }));
+    return items.map((i) => ({ serviceId: i.serviceId, serviceType: i.serviceType, isDefault: i.isDefault, config: i.config }));
   }
 
   @Get(':id/services/:key')
   async getOne(@Param('id') id: string, @Param('key') key: string) {
     const item = await this.svc.get(id, key);
-    return item ? { serviceKey: item.serviceKey, config: item.config } : null;
+    return item ? { serviceType: item.serviceType, config: item.config } : null;
   }
 }
 
